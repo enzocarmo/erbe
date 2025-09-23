@@ -2,11 +2,11 @@
 
 import * as React from "react";
 import {
-  BarChart3,
+  Calculator,
   Users,
   Folder,
   LayoutDashboard,
-  List,
+  ChartNoAxesCombined,
   Settings,
   HelpCircle,
   Search,
@@ -23,15 +23,14 @@ import {
   SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
-  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Logo } from "@/components/ui/logo";
 
 const data = {
   user: {
-    name: "shadcn",
-    email: "m@example.com",
+    name: "Enzo Carmo",
+    email: "enzocarmo64@gmail.com",
     avatar: "/avatars/shadcn.jpg",
   },
   navMain: [
@@ -41,23 +40,18 @@ const data = {
       icon: LayoutDashboard,
     },
     {
-      title: "Lifecycle",
-      url: "/lifecycle",
-      icon: List,
+      title: "Relatórios",
+      url: "/relatorios",
+      icon: ChartNoAxesCombined,
     },
     {
-      title: "Analytics",
-      url: "/analytics",
-      icon: BarChart3,
+      title: "Simulador",
+      url: "/simulador",
+      icon: Calculator,
     },
     {
-      title: "Projects",
-      url: "/projects",
-      icon: Folder,
-    },
-    {
-      title: "Team",
-      url: "/team",
+      title: "Usuários",
+      url: "/usuarios",
       icon: Users,
     },
   ] as Array<{
@@ -67,19 +61,9 @@ const data = {
   }>,
   navSecondary: [
     {
-      title: "Settings",
-      url: "/settings",
-      icon: Settings,
-    },
-    {
-      title: "Get Help",
-      url: "/help",
+      title: "Obter ajuda",
+      url: "/ajuda",
       icon: HelpCircle,
-    },
-    {
-      title: "Search",
-      url: "/search",
-      icon: Search,
     },
   ] as Array<{
     title: string;
@@ -104,7 +88,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               >
                 <Logo 
                   type={isCollapsed ? "icon" : "logo"} 
-                  width={isCollapsed ? 24 : 165} 
+                  width={isCollapsed ? 35 : 165} 
                 />
               </a>
             </div>

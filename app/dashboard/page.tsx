@@ -11,14 +11,7 @@ export const metadata = {
 
 export default function Page() {
   return (
-    <SidebarProvider
-      style={
-        {
-          "--sidebar-width": "calc(var(--spacing) * 72)",
-          "--header-height": "calc(var(--spacing) * 12)",
-        } as React.CSSProperties
-      }
-    >
+    <SidebarProvider>
       <AppSidebar variant="inset" />
       <SidebarInset>
         <div className="flex flex-1 flex-col">
