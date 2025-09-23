@@ -12,6 +12,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useEffect, useState } from "react"
+import { Logo } from "@/components/ui/logo"
 
 export function LoginForm({
   className,
@@ -34,6 +35,9 @@ export function LoginForm({
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
+        <a href="#" className="flex items-center gap-2 self-center font-medium">
+          <Logo type="logo" width={170} />
+        </a>
         <CardHeader className="text-center">
           <CardTitle className="text-xl">{greeting}, acesse sua conta</CardTitle>
           <CardDescription>
