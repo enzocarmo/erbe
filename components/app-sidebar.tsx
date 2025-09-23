@@ -22,11 +22,10 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuButton,
   SidebarMenuItem,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
-import { Separator } from "@/components/ui/separator";
 import { Logo } from "@/components/ui/logo";
 
 const data = {
@@ -38,27 +37,27 @@ const data = {
   navMain: [
     {
       title: "Dashboard",
-      url: "#",
+      url: "/dashboard",
       icon: LayoutDashboard,
     },
     {
       title: "Lifecycle",
-      url: "#",
+      url: "/lifecycle",
       icon: List,
     },
     {
       title: "Analytics",
-      url: "#",
+      url: "/analytics",
       icon: BarChart3,
     },
     {
       title: "Projects",
-      url: "#",
+      url: "/projects",
       icon: Folder,
     },
     {
       title: "Team",
-      url: "#",
+      url: "/team",
       icon: Users,
     },
   ] as Array<{
@@ -69,17 +68,17 @@ const data = {
   navSecondary: [
     {
       title: "Settings",
-      url: "#",
+      url: "/settings",
       icon: Settings,
     },
     {
       title: "Get Help",
-      url: "#",
+      url: "/help",
       icon: HelpCircle,
     },
     {
       title: "Search",
-      url: "#",
+      url: "/search",
       icon: Search,
     },
   ] as Array<{
@@ -90,21 +89,25 @@ const data = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <div className="flex items-center justify-between px-2 py-1.5">
+            <div className="flex items-center justify-center py-4">
               <a
-                href="#"
-                className="flex items-center gap-2 self-center font-medium"
+                href="/"
+                className="flex items-center justify-center"
               >
-                <Logo type="logo" width={120} />
+                <Logo 
+                  type={isCollapsed ? "icon" : "logo"} 
+                  width={isCollapsed ? 24 : 165} 
+                />
               </a>
-              <SidebarTrigger className="ml-auto" />
             </div>
-            <Separator className="my-2" />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
