@@ -90,13 +90,16 @@ function MultiSelect({
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between"
+            className={cn(
+              "w-full justify-between",
+              value.length === 0 && "text-muted-foreground"
+            )}
           >
             {value.length === 0 ? placeholder : `${value.length} item(s) selecionado(s)`}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0">
+        <PopoverContent className="w-[var(--radix-popover-trigger-width)] max-h-[300px] p-0">
           <Command>
             <CommandInput placeholder={searchPlaceholder} />
             <CommandEmpty>{emptyMessage}</CommandEmpty>
@@ -194,7 +197,7 @@ function DateRangePicker({
           defaultMonth={value?.from}
           selected={value}
           onSelect={onChange}
-          numberOfMonths={2}
+          numberOfMonths={1}
           locale={ptBR}
         />
       </PopoverContent>
@@ -257,8 +260,8 @@ export default function Page() {
                     <Plus className="ml-2 h-4 w-4" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent className="w-[500px] sm:max-w-[500px] flex flex-col h-full p-0">
-                  <SheetHeader className="flex-shrink-0 bg-background border-b p-6 pb-4">
+                <SheetContent className="w-[600px] sm:max-w-[600px] flex flex-col p-0 overflow-hidden">
+                  <SheetHeader className="flex-shrink-0 bg-background border-b px-6 py-4 gap-y-0">
                     <SheetTitle>Adicionar simulação</SheetTitle>
                     <SheetDescription>
                       Preencha os campos abaixo para criar uma nova simulação de vendas.
@@ -266,8 +269,8 @@ export default function Page() {
                   </SheetHeader>
 
                   <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full flex-1">
-                      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 min-h-0">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+                      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
                       {/* Nome da simulação */}
                       <FormField
                         control={form.control}
@@ -339,7 +342,7 @@ export default function Page() {
                             <FormLabel>Loja <span className="text-red-500">*</span></FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
-                                <SelectTrigger>
+                                <SelectTrigger className="w-full">
                                   <SelectValue placeholder="Selecione uma loja" />
                                 </SelectTrigger>
                               </FormControl>
@@ -494,19 +497,20 @@ export default function Page() {
                       </div>
                       </div>
 
-                      <Separator />
-
-                      <div className="flex justify-end gap-3">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => setSheetOpen(false)}
-                        >
-                          Cancelar
-                        </Button>
-                        <Button type="submit">
-                          Criar simulação
-                        </Button>
+                      {/* Botões sticky */}
+                      <div className="flex-shrink-0 border-t bg-background px-6 py-4">
+                        <div className="flex justify-end gap-3">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setSheetOpen(false)}
+                          >
+                            Cancelar
+                          </Button>
+                          <Button type="submit">
+                            Criar simulação
+                          </Button>
+                        </div>
                       </div>
                     </form>
                   </Form>
