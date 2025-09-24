@@ -1,13 +1,24 @@
 "use client";
 
+import { useState } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { permissions } from "@/lib/supabase";
 import { PermissionGuard } from "@/components/guards/PermissionGuard";
+import AdicionarUsuarioSheet, { type FormData } from "./AdicionarUsuarioSheet";
 
 export default function Usuarios() {
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  // Callback para lidar com a criação do usuário
+  const handleCreateUser = (data: FormData) => {
+    console.log("Dados do formulário:", data);
+    // Aqui você implementaria a lógica para salvar o usuário
+    // O sheet já se encarrega de fechar e resetar o form
+  };
+
   return (
     <PermissionGuard permission={permissions.visualizarUsuario}>
       <SidebarProvider>
@@ -29,6 +40,12 @@ export default function Usuarios() {
                   />
                   <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 </div>
+
+                <AdicionarUsuarioSheet
+                  open={sheetOpen}
+                  onOpenChange={setSheetOpen}
+                  onSubmit={handleCreateUser}
+                />
               </div>
             </div>
           </main>
