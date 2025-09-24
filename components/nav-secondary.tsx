@@ -1,10 +1,16 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { usePathname } from "next/navigation"
-import Link from "next/link"
-import { type LucideIcon, Moon, Sun, PanelLeftClose, PanelLeftOpen } from "lucide-react"
-import { useTheme } from "next-themes"
+import * as React from "react";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
+import {
+  type LucideIcon,
+  Moon,
+  Sun,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from "lucide-react";
+import { useTheme } from "next-themes";
 
 import {
   SidebarGroup,
@@ -13,32 +19,32 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 
 export function NavSecondary({
   items,
   ...props
 }: {
   items: {
-    title: string
-    url: string
-    icon: LucideIcon
-  }[]
+    title: string;
+    url: string;
+    icon: LucideIcon;
+  }[];
 } & React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
-  const { setTheme, theme, resolvedTheme } = useTheme()
-  const [mounted, setMounted] = React.useState(false)
-  const pathname = usePathname()
+  const { setTheme, theme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
+  const pathname = usePathname();
 
   // Evita hydration mismatch
   React.useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
   const toggleTheme = () => {
-    setTheme(resolvedTheme === "dark" ? "light" : "dark")
-  }
-  
-  const { toggleSidebar, state } = useSidebar()
+    setTheme(resolvedTheme === "dark" ? "light" : "dark");
+  };
+
+  const { toggleSidebar, state } = useSidebar();
 
   return (
     <SidebarGroup {...props}>
@@ -59,7 +65,13 @@ export function NavSecondary({
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
-              tooltip={mounted ? (resolvedTheme === "dark" ? "Mudar para o modo claro" : "Mudar para o modo escuro") : "Mudar o tema"}
+              tooltip={
+                mounted
+                  ? resolvedTheme === "dark"
+                    ? "Mudar para o modo claro"
+                    : "Mudar para o modo escuro"
+                  : "Mudar o tema"
+              }
               onClick={toggleTheme}
             >
               {mounted && resolvedTheme === "dark" ? (
@@ -67,15 +79,22 @@ export function NavSecondary({
               ) : (
                 <Moon className="h-4 w-4" />
               )}
-              <span>Tema</span>
+              <span>
+                {mounted
+                  ? resolvedTheme === "dark"
+                    ? "Modo claro"
+                    : "Modo escuro"
+                  : "Tema"}
+              </span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           {items.map((item) => {
-            const isActive = pathname === item.url || pathname.startsWith(item.url + "/")
-            
+            const isActive =
+              pathname === item.url || pathname.startsWith(item.url + "/");
+
             return (
               <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton 
+                <SidebarMenuButton
                   asChild
                   tooltip={item.title}
                   isActive={isActive}
@@ -86,10 +105,10 @@ export function NavSecondary({
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-            )
+            );
           })}
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>
-  )
+  );
 }

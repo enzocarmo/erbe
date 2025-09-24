@@ -88,7 +88,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               >
                 <Logo 
                   type={isCollapsed ? "icon" : "logo"} 
-                  width={isCollapsed ? 35 : 165} 
+                  width={isCollapsed ? 32 : 165} 
                 />
               </a>
             </div>
