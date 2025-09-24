@@ -8,7 +8,7 @@ import {
   Calendar as CalendarDaysIcon,
 } from "lucide-react";
 
-export default function Page() {
+export default function Usuarios() {
   return (
     <SidebarProvider>
       <AppSidebar variant="inset" />
