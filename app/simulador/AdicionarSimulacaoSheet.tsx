@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { UseFormReturn } from "react-hook-form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import {
   Sheet,
   SheetContent,
@@ -56,27 +58,35 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { DateRange } from "react-day-picker";
 
-// Tipos
-interface FormData {
-  nome: string;
-  compartilharCom?: string[];
-  pesquisasPreco: string[];
-  loja: string;
-  periodo: {
-    from: Date;
-    to: Date;
-  };
-  departamentos?: string[];
-  grupos?: string[];
-  fornecedores?: string[];
-  marcas?: string[];
-  produtos?: string[];
-}
+// Schema de validação - agora está no componente correto
+const formSchema = z.object({
+  nome: z.string().min(1, "Nome da simulação é obrigatório"),
+  compartilharCom: z.array(z.string()).optional(),
+  pesquisasPreco: z
+    .array(z.string())
+    .min(1, "Pelo menos uma pesquisa de preço é obrigatória"),
+  loja: z.string().min(1, "Loja é obrigatória"),
+  periodo: z.object(
+    {
+      from: z.date({ message: "Data inicial é obrigatória" }),
+      to: z.date({ message: "Data final é obrigatória" }),
+    },
+    { message: "Período é obrigatório" }
+  ),
+  departamentos: z.array(z.string()).optional(),
+  grupos: z.array(z.string()).optional(),
+  fornecedores: z.array(z.string()).optional(),
+  marcas: z.array(z.string()).optional(),
+  produtos: z.array(z.string()).optional(),
+});
 
+// Tipo derivado do schema
+type FormData = z.infer<typeof formSchema>;
+
+// Interface para as props do componente - agora mais simples
 interface AdicionarSimulacaoSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  form: UseFormReturn<FormData>;
   onSubmit: (data: FormData) => void;
 }
 
@@ -104,6 +114,7 @@ function MultiSelect({
   placeholder,
   searchPlaceholder = "Pesquisar...",
   emptyMessage = "Nenhum item encontrado.",
+  hasError = false,
 }: {
   options: string[];
   value?: string[];
@@ -111,6 +122,7 @@ function MultiSelect({
   placeholder: string;
   searchPlaceholder?: string;
   emptyMessage?: string;
+  hasError?: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -135,7 +147,9 @@ function MultiSelect({
             aria-expanded={open}
             className={cn(
               "w-full justify-between bg-white hover:bg-accent hover:text-accent-foreground",
-              value.length === 0 && "text-muted-foreground"
+              "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              value.length === 0 && "text-muted-foreground",
+              hasError && "border-destructive focus-visible:ring-destructive"
             )}
           >
             {value.length === 0
@@ -204,9 +218,11 @@ function MultiSelect({
 function DateRangePicker({
   value,
   onChange,
+  hasError = false,
 }: {
   value?: DateRange;
   onChange: (value: DateRange | undefined) => void;
+  hasError?: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -217,7 +233,9 @@ function DateRangePicker({
           variant="outline"
           className={cn(
             "w-full justify-start text-left font-normal bg-white hover:bg-accent hover:text-accent-foreground",
-            !value?.from && "text-muted-foreground"
+            "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+            !value?.from && "text-muted-foreground",
+            hasError && "border-destructive focus-visible:ring-destructive"
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
@@ -253,11 +271,28 @@ function DateRangePicker({
 export default function AdicionarSimulacaoSheet({
   open,
   onOpenChange,
-  form,
   onSubmit,
 }: AdicionarSimulacaoSheetProps) {
+  // Form é gerenciado internamente no componente
+  const form = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      nome: "",
+      compartilharCom: [],
+      pesquisasPreco: [],
+      loja: "",
+      departamentos: [],
+      grupos: [],
+      fornecedores: [],
+      marcas: [],
+      produtos: [],
+    },
+  });
+
   const handleFormSubmit = (data: FormData) => {
     onSubmit(data);
+    onOpenChange(false);
+    form.reset();
   };
 
   return (
@@ -272,7 +307,7 @@ export default function AdicionarSimulacaoSheet({
         <SheetHeader className="flex-shrink-0 bg-white border-b px-6 py-4 gap-y-0">
           <SheetTitle>Adicionar simulação</SheetTitle>
           <SheetDescription>
-            Preencha os campos abaixo para criar uma nova simulação de vendas.
+            Preencha os campos abaixo para adicionar uma nova simulação de vendas.
           </SheetDescription>
         </SheetHeader>
 
@@ -307,7 +342,7 @@ export default function AdicionarSimulacaoSheet({
               <FormField
                 control={form.control}
                 name="compartilharCom"
-                render={({ field }) => (
+                render={({ field, fieldState }) => (
                   <FormItem>
                     <FormLabel>Compartilhar com</FormLabel>
                     <FormControl>
@@ -318,6 +353,7 @@ export default function AdicionarSimulacaoSheet({
                         placeholder="Selecione usuários para compartilhar"
                         searchPlaceholder="Pesquisar usuários..."
                         emptyMessage="Nenhum usuário encontrado."
+                        hasError={!!fieldState.error}
                       />
                     </FormControl>
                     <FormDescription>
@@ -332,7 +368,7 @@ export default function AdicionarSimulacaoSheet({
               <FormField
                 control={form.control}
                 name="pesquisasPreco"
-                render={({ field }) => (
+                render={({ field, fieldState }) => (
                   <FormItem>
                     <FormLabel>
                       Pesquisas de preço{" "}
@@ -346,6 +382,7 @@ export default function AdicionarSimulacaoSheet({
                         placeholder="Selecione as pesquisas de preço"
                         searchPlaceholder="Pesquisar pesquisas..."
                         emptyMessage="Nenhuma pesquisa encontrada."
+                        hasError={!!fieldState.error}
                       />
                     </FormControl>
                     <FormMessage />
@@ -357,7 +394,7 @@ export default function AdicionarSimulacaoSheet({
               <FormField
                 control={form.control}
                 name="loja"
-                render={({ field }) => (
+                render={({ field, fieldState }) => (
                   <FormItem>
                     <FormLabel>
                       Loja <span className="text-red-500">*</span>
@@ -367,7 +404,13 @@ export default function AdicionarSimulacaoSheet({
                       defaultValue={field.value}
                     >
                       <FormControl>
-                        <SelectTrigger className="w-full bg-white hover:bg-accent hover:text-accent-foreground hover:[&>span]:text-accent-foreground">
+                        <SelectTrigger 
+                          className={cn(
+                            "w-full bg-white hover:bg-accent hover:text-accent-foreground hover:[&>span]:text-accent-foreground",
+                            "focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                            fieldState.error && "border-destructive focus:ring-destructive"
+                          )}
+                        >
                           <SelectValue placeholder="Selecione uma loja" />
                         </SelectTrigger>
                       </FormControl>
@@ -388,7 +431,7 @@ export default function AdicionarSimulacaoSheet({
               <FormField
                 control={form.control}
                 name="periodo"
-                render={({ field }) => (
+                render={({ field, fieldState }) => (
                   <FormItem>
                     <FormLabel>
                       Período <span className="text-red-500">*</span>
@@ -397,6 +440,7 @@ export default function AdicionarSimulacaoSheet({
                       <DateRangePicker
                         value={field.value}
                         onChange={field.onChange}
+                        hasError={!!fieldState.error}
                       />
                     </FormControl>
                     <FormMessage />
@@ -416,7 +460,7 @@ export default function AdicionarSimulacaoSheet({
                 <FormField
                   control={form.control}
                   name="departamentos"
-                  render={({ field }) => (
+                  render={({ field, fieldState }) => (
                     <FormItem>
                       <FormLabel>Departamentos</FormLabel>
                       <FormControl>
@@ -427,6 +471,7 @@ export default function AdicionarSimulacaoSheet({
                           placeholder="Selecione departamentos"
                           searchPlaceholder="Pesquisar departamentos..."
                           emptyMessage="Nenhum departamento encontrado."
+                          hasError={!!fieldState.error}
                         />
                       </FormControl>
                       <FormMessage />
@@ -438,7 +483,7 @@ export default function AdicionarSimulacaoSheet({
                 <FormField
                   control={form.control}
                   name="grupos"
-                  render={({ field }) => (
+                  render={({ field, fieldState }) => (
                     <FormItem>
                       <FormLabel>Grupos</FormLabel>
                       <FormControl>
@@ -449,6 +494,7 @@ export default function AdicionarSimulacaoSheet({
                           placeholder="Selecione grupos"
                           searchPlaceholder="Pesquisar grupos..."
                           emptyMessage="Nenhum grupo encontrado."
+                          hasError={!!fieldState.error}
                         />
                       </FormControl>
                       <FormMessage />
@@ -460,7 +506,7 @@ export default function AdicionarSimulacaoSheet({
                 <FormField
                   control={form.control}
                   name="fornecedores"
-                  render={({ field }) => (
+                  render={({ field, fieldState }) => (
                     <FormItem>
                       <FormLabel>Fornecedores</FormLabel>
                       <FormControl>
@@ -471,6 +517,7 @@ export default function AdicionarSimulacaoSheet({
                           placeholder="Selecione fornecedores"
                           searchPlaceholder="Pesquisar fornecedores..."
                           emptyMessage="Nenhum fornecedor encontrado."
+                          hasError={!!fieldState.error}
                         />
                       </FormControl>
                       <FormMessage />
@@ -482,7 +529,7 @@ export default function AdicionarSimulacaoSheet({
                 <FormField
                   control={form.control}
                   name="marcas"
-                  render={({ field }) => (
+                  render={({ field, fieldState }) => (
                     <FormItem>
                       <FormLabel>Marcas</FormLabel>
                       <FormControl>
@@ -493,6 +540,7 @@ export default function AdicionarSimulacaoSheet({
                           placeholder="Selecione marcas"
                           searchPlaceholder="Pesquisar marcas..."
                           emptyMessage="Nenhuma marca encontrada."
+                          hasError={!!fieldState.error}
                         />
                       </FormControl>
                       <FormMessage />
@@ -504,7 +552,7 @@ export default function AdicionarSimulacaoSheet({
                 <FormField
                   control={form.control}
                   name="produtos"
-                  render={({ field }) => (
+                  render={({ field, fieldState }) => (
                     <FormItem>
                       <FormLabel>Produtos</FormLabel>
                       <FormControl>
@@ -515,6 +563,7 @@ export default function AdicionarSimulacaoSheet({
                           placeholder="Selecione produtos"
                           searchPlaceholder="Pesquisar produtos..."
                           emptyMessage="Nenhum produto encontrado."
+                          hasError={!!fieldState.error}
                         />
                       </FormControl>
                       <FormMessage />
@@ -534,7 +583,7 @@ export default function AdicionarSimulacaoSheet({
                 >
                   Cancelar
                 </Button>
-                <Button type="submit">Criar simulação</Button>
+                <Button type="submit">Adicionar simulação</Button>
               </div>
             </div>
           </form>
@@ -543,3 +592,6 @@ export default function AdicionarSimulacaoSheet({
     </Sheet>
   );
 }
+
+// Exportar o tipo para caso seja necessário em outros lugares
+export type { FormData };

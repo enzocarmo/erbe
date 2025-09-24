@@ -16,34 +16,7 @@ import {
   Calendar as CalendarDaysIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import AdicionarSimulacaoSheet from "./AdicionarSimulacaoSheet";
-
-// Schema de validação
-const formSchema = z.object({
-  nome: z.string().min(1, "Nome da simulação é obrigatório"),
-  compartilharCom: z.array(z.string()).optional(),
-  pesquisasPreco: z
-    .array(z.string())
-    .min(1, "Pelo menos uma pesquisa de preço é obrigatória"),
-  loja: z.string().min(1, "Loja é obrigatória"),
-  periodo: z.object(
-    {
-      from: z.date({ message: "Data inicial é obrigatória" }),
-      to: z.date({ message: "Data final é obrigatória" }),
-    },
-    { message: "Período é obrigatório" }
-  ),
-  departamentos: z.array(z.string()).optional(),
-  grupos: z.array(z.string()).optional(),
-  fornecedores: z.array(z.string()).optional(),
-  marcas: z.array(z.string()).optional(),
-  produtos: z.array(z.string()).optional(),
-});
-
-type FormData = z.infer<typeof formSchema>;
+import AdicionarSimulacaoSheet, { type FormData } from "./AdicionarSimulacaoSheet";
 
 // Dados fictícios para as simulações
 const simulacoes = [
@@ -102,26 +75,11 @@ const getStatusBadgeVariant = (statusType: string) => {
 export default function Page() {
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      nome: "",
-      compartilharCom: [],
-      pesquisasPreco: [],
-      loja: "",
-      departamentos: [],
-      grupos: [],
-      fornecedores: [],
-      marcas: [],
-      produtos: [],
-    },
-  });
-
-  const onSubmit = (data: FormData) => {
+  // Callback simples para lidar com a criação da simulação
+  const handleCreateSimulation = (data: FormData) => {
     console.log("Dados do formulário:", data);
     // Aqui você implementaria a lógica para salvar a simulação
-    setSheetOpen(false);
-    form.reset();
+    // O sheet já se encarrega de fechar e resetar o form
   };
 
   const handleEdit = (id: number) => {
@@ -158,8 +116,7 @@ export default function Page() {
               <AdicionarSimulacaoSheet
                 open={sheetOpen}
                 onOpenChange={setSheetOpen}
-                form={form}
-                onSubmit={onSubmit}
+                onSubmit={handleCreateSimulation}
               />
             </div>
           </div>
