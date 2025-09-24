@@ -366,7 +366,7 @@ export default function Page() {
               <div className="relative">
                 <Input
                   placeholder="Pesquise por uma simulação..."
-                  className="w-64 pr-10"
+                  className="bg-white w-64 pr-10"
                 />
                 <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               </div>
