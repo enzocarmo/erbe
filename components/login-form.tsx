@@ -24,6 +24,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Logo } from "@/components/ui/logo";
+import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Schema de validação
 const loginFormSchema = z.object({
@@ -51,6 +54,9 @@ export function LoginForm({
   ...props
 }: LoginFormProps) {
   const [greeting, setGreeting] = useState("Bom dia");
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const { refreshUser } = useAuth();
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -73,17 +79,43 @@ export function LoginForm({
     },
   });
 
-  const handleFormSubmit = (data: LoginFormData) => {
-    // Aqui você pode chamar sua função de login
-    console.log("Dados do login:", data);
+  const handleFormSubmit = async (data: LoginFormData) => {
+    setIsLoading(true);
     
-    // Se foi passada uma função onSubmit, chama ela
-    if (onSubmit) {
-      onSubmit(data);
+    try {
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
+
+      if (error) {
+        console.error('Erro no login:', error);
+        form.setError("root", {
+          message: "E-mail ou senha incorretos. Tente novamente."
+        });
+        return;
+      }
+
+      if (authData.user) {
+        // Atualizar o contexto de autenticação
+        await refreshUser();
+        
+        // Se foi passada uma função onSubmit, chama ela
+        if (onSubmit) {
+          onSubmit(data);
+        }
+        
+        // Redirecionar para o dashboard
+        router.push('/dashboard');
+      }
+    } catch (error) {
+      console.error('Erro inesperado no login:', error);
+      form.setError("root", {
+        message: "Ocorreu um erro inesperado. Tente novamente."
+      });
+    } finally {
+      setIsLoading(false);
     }
-    
-    // Exemplo de como você poderia fazer a autenticação
-    // loginUser(data.email, data.password);
   };
 
   return (
@@ -114,6 +146,7 @@ export function LoginForm({
                           <Input
                             type="email"
                             placeholder="Digite seu e-mail"
+                            disabled={isLoading}
                             {...field}
                           />
                         </FormControl>
@@ -133,6 +166,7 @@ export function LoginForm({
                           <Input
                             type="password"
                             placeholder="Digite sua senha"
+                            disabled={isLoading}
                             {...field}
                           />
                         </FormControl>
@@ -141,8 +175,15 @@ export function LoginForm({
                     )}
                   />
 
-                  <Button type="submit" className="w-full">
-                    Entrar
+                  {/* Mensagem de erro geral */}
+                  {form.formState.errors.root && (
+                    <div className="text-sm text-red-600">
+                      {form.formState.errors.root.message}
+                    </div>
+                  )}
+
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? "Entrando..." : "Entrar"}
                   </Button>
                 </div>
               </div>
