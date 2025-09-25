@@ -313,8 +313,8 @@ export default function AdicionarUsuarioSheet({
           <Plus className="ml-2 h-4 w-4" />
         </Button>
       </SheetTrigger>
-      <SheetContent className="bg-white w-[600px] sm:max-w-[600px] flex flex-col p-0 overflow-hidden gap-y-0">
-        <SheetHeader className="flex-shrink-0 bg-white border-b px-6 py-4 gap-y-0">
+      <SheetContent className="bg-sidebar w-[600px] sm:max-w-[600px] flex flex-col p-0 overflow-hidden gap-y-0">
+        <SheetHeader className="flex-shrink-0 bg-sidebar border-b px-6 py-4 gap-y-0">
           <SheetTitle>Adicionar usuário</SheetTitle>
           <SheetDescription>
             Preencha os campos abaixo para adicionar um novo usuário ao sistema.
@@ -728,7 +728,7 @@ export default function AdicionarUsuarioSheet({
             </div>
 
             {/* Botões sticky */}
-            <div className="flex-shrink-0 border-t bg-white px-6 py-4">
+            <div className="flex-shrink-0 border-t bg-sidebar px-6 py-4">
               <div className="flex justify-end gap-3">
                 <Button
                   type="button"
