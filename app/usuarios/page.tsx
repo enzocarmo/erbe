@@ -7,13 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { permissions } from "@/lib/supabase";
 import { PermissionGuard } from "@/components/guards/PermissionGuard";
-import AdicionarUsuarioSheet, { type FormData } from "./AdicionarUsuarioSheet";
+import AdicionarUsuarioSheet from "./AdicionarUsuarioSheet";
+import type { UserFormData } from "@/types/user";
 
 export default function Usuarios() {
   const [sheetOpen, setSheetOpen] = useState(false);
 
   // Callback para lidar com a criação do usuário
-  const handleCreateUser = (data: FormData) => {
+  const handleCreateUser = (data: UserFormData) => {
     console.log("Dados do formulário:", data);
     // Aqui você implementaria a lógica para salvar o usuário
     // O sheet já se encarrega de fechar e resetar o form
