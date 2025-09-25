@@ -5,6 +5,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
+import {
+  criarUsuario,
+  DadosParaCriarUsuario,
+} from "@/lib/servicos/servicoUsuarios";
 import {
   Sheet,
   SheetContent,
@@ -219,18 +224,56 @@ export default function AdicionarUsuarioSheet({
     });
   };
 
-  const handleFormSubmit = (data: z.infer<typeof formSchema>) => {
-    const processedData: UserFormData = {
-      ...data,
-      departamentos: getProcessedDepartamentos(data.departamentos),
-      lojas: getProcessedLojas(data.lojas),
-      permissoes: Array.from(selectedPermissoes),
-    };
+  async function validarEUploadFoto(arquivo: File, email: string) {
+    const tiposPermitidos = ["image/png", "image/jpeg", "image/webp"];
+    const tamanhoMax = 3 * 1024 * 1024; // 3MB
 
-    onSubmit(processedData);
-    onOpenChange(false);
-    form.reset();
-    setSelectedPermissoes(new Set());
+    if (!tiposPermitidos.includes(arquivo.type)) {
+      throw new Error("Formato inválido. Use PNG, JPG ou WEBP.");
+    }
+    if (arquivo.size > tamanhoMax) {
+      throw new Error("Imagem muito grande (máx. 3MB).");
+    }
+
+    const extensao = arquivo.name.split(".").pop()?.toLowerCase() ?? "png";
+    const caminho = `perfil/${email}-${Date.now()}.${extensao}`;
+
+    const { error: erroUpload } = await supabase.storage
+      .from("usuarios_fotos")
+      .upload(caminho, arquivo, { upsert: true });
+
+    if (erroUpload) throw new Error("Falha no upload da imagem.");
+
+    const { data: publico } = supabase.storage
+      .from("usuarios_fotos")
+      .getPublicUrl(caminho);
+    return publico.publicUrl;
+  }
+
+  const handleFormSubmit = async (data: z.infer<typeof formSchema>) => {
+    try {
+      const urlFoto = await validarEUploadFoto(data.foto_perfil, data.email);
+
+      const dados: DadosParaCriarUsuario = {
+        nome: data.nome,
+        email: data.email,
+        senha: data.senha,
+        foto_perfil_url: urlFoto,
+        departamentos: getProcessedDepartamentos(data.departamentos),
+        lojas: getProcessedLojas(data.lojas),
+        permissoes: Array.from(selectedPermissoes),
+        relatorios: data.relatorios,
+      };
+
+      await criarUsuario(dados);
+
+      toast.success("Usuário criado com sucesso!");
+      onOpenChange(false);
+      form.reset();
+      setSelectedPermissoes(new Set());
+    } catch (e: any) {
+      toast.error(e?.message ?? "Erro ao criar usuário");
+    }
   };
 
   const handlePermissaoChange = (permissaoId: string, checked: boolean) => {
@@ -250,14 +293,8 @@ export default function AdicionarUsuarioSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Adicionar usuário
-        </Button>
-      </SheetTrigger>
       <SheetContent className="bg-sidebar w-[600px] sm:max-w-[600px] flex flex-col p-0 gap-y-0 overflow-hidden">
-        <SheetHeader className="flex-shrink-0 bg-sidebar border-b px-6 py-4">
+        <SheetHeader className="flex-shrink-0 bg-sidebar border-b px-6 py-4 gap-y-0">
           <SheetTitle>Adicionar usuário</SheetTitle>
           <SheetDescription>
             Preencha os campos abaixo para adicionar um novo usuário ao sistema.
@@ -521,9 +558,7 @@ export default function AdicionarUsuarioSheet({
                       name="permissoes"
                       render={({ fieldState }) => (
                         <FormItem>
-                          <FormLabel>
-                            Permissões do usuário
-                          </FormLabel>
+                          <FormLabel>Permissões do usuário</FormLabel>
                           {fieldState.error && (
                             <FormMessage>
                               {fieldState.error.message}

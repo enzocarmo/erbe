@@ -1,0 +1,20 @@
+.ag-theme-shadcn {
+  --ag-font-family: var(--font-sans, ui-sans-serif, system-ui);
+  --ag-font-size: 13px;
+  --ag-border-color: hsl(var(--border));
+  --ag-header-background-color: hsl(var(--card));
+  --ag-odd-row-background-color: hsl(var(--background));
+  --ag-even-row-background-color: hsl(var(--background));
+  --ag-foreground-color: hsl(var(--foreground));
+  --ag-secondary-foreground-color: hsl(var(--muted-foreground));
+  --ag-row-hover-color: hsl(var(--accent));
+  --ag-selected-row-background-color: hsl(var(--accent));
+  --ag-header-foreground-color: hsl(var(--foreground));
+  --ag-input-border-color: hsl(var(--input));
+  --ag-control-panel-background-color: transparent;
+  --ag-tooltip-background-color: hsl(var(--popover));
+  --ag-tooltip-foreground-color: hsl(var(--popover-foreground));
+  --ag-borders: solid 1px;
+  --ag-card-radius: 0.75rem;
+  --ag-header-column-separator-display: block;
+}

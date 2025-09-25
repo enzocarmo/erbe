@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Montserrat } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers/AuthProvider";
+import { Toaster } from "@/components/ui/sonner"
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -29,6 +30,7 @@ export default function RootLayout({
           {children}
         </Providers>
       </body>
+      <Toaster richColors position="top-right" /> 
     </html>
   );
 }
