@@ -39,7 +39,7 @@ export function NavUser() {
   const handleLogout = async () => {
     try {
       await signOut()
-      router.push('/')
+      router.push('/login') // Alterado para redirecionar para /login
     } catch (error) {
       console.error('Erro ao fazer logout:', error)
     }
@@ -69,9 +69,9 @@ export function NavUser() {
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <Avatar className="h-8 w-8 rounded-lg grayscale">
+              <Avatar className="h-8 w-8 rounded-full grayscale"> {/* Alterado para rounded-full */}
                 <AvatarImage src={userProfile.foto_perfil || ""} alt={userProfile.nome} />
-                <AvatarFallback className="rounded-lg">
+                <AvatarFallback className="rounded-full"> {/* Alterado para rounded-full */}
                   {getInitials(userProfile.nome)}
                 </AvatarFallback>
               </Avatar>
@@ -92,9 +92,9 @@ export function NavUser() {
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
+                <Avatar className="h-8 w-8 rounded-full"> {/* Alterado para rounded-full */}
                   <AvatarImage src={userProfile.foto_perfil || ""} alt={userProfile.nome} />
-                  <AvatarFallback className="rounded-lg">
+                  <AvatarFallback className="rounded-full"> {/* Alterado para rounded-full */}
                     {getInitials(userProfile.nome)}
                   </AvatarFallback>
                 </Avatar>
