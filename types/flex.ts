@@ -15,7 +15,13 @@ export interface FlexDepartamento {
 }
 
 export interface FlexDepartamentosResponse {
-  departamentos: FlexDepartamento[];
+  response: {
+    status: string;
+    appVersion?: string;
+    message?: string;
+    messages?: { message: string }[];
+    departamentos: FlexDepartamento[];
+  };
 }
 
 export interface FlexUnidade {
@@ -25,7 +31,14 @@ export interface FlexUnidade {
   [key: string]: any;
 }
 
-export interface FlexUnidadesResponse extends Array<FlexUnidade> {}
+export interface FlexUnidadesResponse {
+  response: {
+    status: string;
+    appVersion?: string;
+    messages?: { message: string }[];
+    unidades: FlexUnidade[];
+  };
+}
 
 // Tipos para formulário
 export interface DepartamentoFormData {
@@ -35,6 +48,5 @@ export interface DepartamentoFormData {
 
 export interface LojaFormData {
   loja_codigo: string;
-  loja_nome: string;
   loja_municipio: string;
 }

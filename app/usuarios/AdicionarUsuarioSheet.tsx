@@ -43,25 +43,23 @@ import { useLojas } from "@/hooks/useLojas";
 import { useRelatorios } from "@/hooks/useRelatorios";
 
 // Tipos
-import type { 
-  ModuloComPermissoes, 
-  UserFormData 
-} from "@/types/user";
-import type { 
-  DepartamentoFormData, 
-  LojaFormData, 
+import type { ModuloComPermissoes, UserFormData } from "@/types/user";
+import type {
+  DepartamentoFormData,
+  LojaFormData,
   FlexDepartamento,
-  FlexUnidade 
+  FlexUnidade,
 } from "@/types/flex";
 
 // Componentes
-import { EnhancedMultiSelect, MultiSelectOption } from "@/components/ui/enhanced-multiselect";
+import { MultiSelect, MultiSelectOption } from "@/components/ui/multiselect";
 
 // Schema de validação
 const formSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
   email: z.string().email("Email inválido").min(1, "Email é obrigatório"),
-  senha: z.string()
+  senha: z
+    .string()
     .min(6, "Senha deve ter pelo menos 6 caracteres")
     .regex(/[a-z]/, "Deve conter ao menos uma letra minúscula")
     .regex(/[A-Z]/, "Deve conter ao menos uma letra maiúscula")
@@ -69,29 +67,20 @@ const formSchema = z.object({
     .regex(/[^a-zA-Z0-9]/, "Deve conter ao menos um símbolo"),
   foto_perfil: z.instanceof(File, { message: "Foto de perfil é obrigatória" }),
   departamentos: z
-    .array(z.object({
-      departamento_nome: z.string(),
-      departamento_codigo: z.string(),
-    }))
+    .array(z.string())
     .min(1, "Pelo menos um departamento deve ser selecionado"),
-  lojas: z
-    .array(z.object({
-      loja_codigo: z.string(),
-      loja_nome: z.string(),
-      loja_municipio: z.string(),
-    }))
-    .min(1, "Pelo menos uma loja deve ser selecionada"),
+  lojas: z.array(z.string()).min(1, "Pelo menos uma loja deve ser selecionada"),
   relatorios: z
     .array(z.string())
     .min(1, "Pelo menos um relatório deve ser selecionado"),
-  permissoes: z
-    .array(z.string())
-    .min(1, "Pelo menos uma permissão deve ser selecionada"),
+  permissoes: z.array(z.string()).optional(),
 });
 
 // Hook para buscar módulos e permissões
 function useModulosPermissoes() {
-  const [modulosComPermissoes, setModulosComPermissoes] = useState<ModuloComPermissoes[]>([]);
+  const [modulosComPermissoes, setModulosComPermissoes] = useState<
+    ModuloComPermissoes[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -102,8 +91,8 @@ function useModulosPermissoes() {
         setError(null);
 
         const [modulosResult, permissoesResult] = await Promise.all([
-          supabase.from('modulos').select('*').order('nome'),
-          supabase.from('permissoes').select('*').order('nome'),
+          supabase.from("modulos").select("*").order("nome"),
+          supabase.from("permissoes").select("*").order("nome"),
         ]);
 
         if (modulosResult.error) throw modulosResult.error;
@@ -112,14 +101,16 @@ function useModulosPermissoes() {
         const modulosData: ModuloComPermissoes[] = modulosResult.data
           .map((modulo) => ({
             ...modulo,
-            permissoes: permissoesResult.data.filter((permissao) => permissao.modulo === modulo.id),
+            permissoes: permissoesResult.data.filter(
+              (permissao) => permissao.modulo === modulo.id
+            ),
           }))
           .filter((modulo) => modulo.permissoes.length > 0);
 
         setModulosComPermissoes(modulosData);
       } catch (err) {
-        console.error('Erro ao buscar módulos e permissões:', err);
-        setError('Erro ao carregar permissões. Tente novamente.');
+        console.error("Erro ao buscar módulos e permissões:", err);
+        setError("Erro ao carregar permissões. Tente novamente.");
       } finally {
         setLoading(false);
       }
@@ -142,17 +133,36 @@ export default function AdicionarUsuarioSheet({
   onOpenChange,
   onSubmit,
 }: AdicionarUsuarioSheetProps) {
-  const [selectedPermissoes, setSelectedPermissoes] = useState<Set<string>>(new Set());
+  const [selectedPermissoes, setSelectedPermissoes] = useState<Set<string>>(
+    new Set()
+  );
 
   // Hooks para buscar dados
-  const { departamentos, loading: loadingDepartamentos, error: errorDepartamentos } = useDepartamentos();
-  const { lojasGrouped, loading: loadingLojas, error: errorLojas } = useLojas();
-  const { relatorios, loading: loadingRelatorios, error: errorRelatorios } = useRelatorios();
-  const { modulosComPermissoes, loading: loadingPermissoes, error: errorPermissoes } = useModulosPermissoes();
+  const {
+    departamentos,
+    loading: loadingDepartamentos,
+    error: errorDepartamentos,
+  } = useDepartamentos();
+  const { lojas, loading: loadingLojas, error: errorLojas } = useLojas();
+  const {
+    relatorios,
+    loading: loadingRelatorios,
+    error: errorRelatorios,
+  } = useRelatorios();
+  const {
+    modulosComPermissoes,
+    loading: loadingPermissoes,
+    error: errorPermissoes,
+  } = useModulosPermissoes();
 
   // Verificar se há algum erro
-  const hasError = errorDepartamentos || errorLojas || errorRelatorios || errorPermissoes;
-  const isLoading = loadingDepartamentos || loadingLojas || loadingRelatorios || loadingPermissoes;
+  const hasError =
+    errorDepartamentos || errorLojas || errorRelatorios || errorPermissoes;
+  const isLoading =
+    loadingDepartamentos ||
+    loadingLojas ||
+    loadingRelatorios ||
+    loadingPermissoes;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -169,63 +179,54 @@ export default function AdicionarUsuarioSheet({
   });
 
   // Preparar opções para os multiselects
-  const departamentosOptions: MultiSelectOption[] = departamentos.map((dep) => ({
-    value: dep.codigo,
-    label: `${dep.descricao} - ${dep.codigo}`,
-  }));
-
-  const lojasOptions: MultiSelectOption[] = lojasGrouped.flatMap((group) =>
-    group.lojas.map((loja) => ({
-      value: loja.Codigo,
-      label: `${loja.Nome} - ${loja.Codigo}`,
-      group: group.municipio,
-    }))
+  const departamentosOptions: MultiSelectOption[] = departamentos.map(
+    (dep) => ({
+      value: dep.codigo,
+      label: `${dep.descricao} - ${dep.codigo}`,
+    })
   );
+
+  const lojasOptions: MultiSelectOption[] = lojas.map((loja) => ({
+    value: loja.Codigo,
+    label: loja.Codigo,
+  }));
 
   const relatoriosOptions: MultiSelectOption[] = relatorios.map((rel) => ({
     value: rel.id,
     label: rel.nome,
   }));
 
-  // Handlers para conversão de dados
-  const getDepartamentoValue = (option: MultiSelectOption): DepartamentoFormData => {
-    const departamento = departamentos.find(d => d.codigo === option.value);
-    return {
-      departamento_nome: departamento?.descricao || "",
-      departamento_codigo: option.value,
-    };
+  // Funções para obter os dados processados para submissão
+  const getProcessedDepartamentos = (
+    selectedCodigos: string[]
+  ): DepartamentoFormData[] => {
+    return selectedCodigos.map((codigo) => {
+      const departamento = departamentos.find((d) => d.codigo === codigo);
+      return {
+        departamento_nome: departamento?.descricao || "",
+        departamento_codigo: codigo,
+      };
+    });
   };
 
-  const getLojaValue = (option: MultiSelectOption): LojaFormData => {
-    const loja = lojasGrouped
-      .flatMap(group => group.lojas)
-      .find(l => l.Codigo === option.value);
-    
-    return {
-      loja_codigo: option.value,
-      loja_nome: loja?.Nome || "",
-      loja_municipio: loja?.Municipio || "",
-    };
+  const getProcessedLojas = (selectedCodigos: string[]): LojaFormData[] => {
+    return selectedCodigos.map((codigo) => {
+      const loja = lojas.find((l) => l.Codigo === codigo);
+      return {
+        loja_codigo: codigo,
+        loja_municipio: loja?.Municipio || "",
+      };
+    });
   };
-
-  const getRelatorioValue = (option: MultiSelectOption): string => option.value;
-
-  // Display functions
-  const getDepartamentoDisplay = (dep: DepartamentoFormData) => 
-    `${dep.departamento_nome} - ${dep.departamento_codigo}`;
-  
-  const getLojaDisplay = (loja: LojaFormData) => 
-    `${loja.loja_nome} - ${loja.loja_codigo}`;
-  
-  const getRelatorioDisplay = (relatorioId: string) => 
-    relatorios.find(r => r.id === relatorioId)?.nome || relatorioId;
 
   const handleFormSubmit = (data: z.infer<typeof formSchema>) => {
     const processedData: UserFormData = {
       ...data,
+      departamentos: getProcessedDepartamentos(data.departamentos),
+      lojas: getProcessedLojas(data.lojas),
       permissoes: Array.from(selectedPermissoes),
     };
-    
+
     onSubmit(processedData);
     onOpenChange(false);
     form.reset();
@@ -233,14 +234,14 @@ export default function AdicionarUsuarioSheet({
   };
 
   const handlePermissaoChange = (permissaoId: string, checked: boolean) => {
-    setSelectedPermissoes(prev => {
+    setSelectedPermissoes((prev) => {
       const newSet = new Set(prev);
       if (checked) {
         newSet.add(permissaoId);
       } else {
         newSet.delete(permissaoId);
       }
-      
+
       // Atualizar o form com o novo array
       form.setValue("permissoes", Array.from(newSet));
       return newSet;
@@ -255,7 +256,7 @@ export default function AdicionarUsuarioSheet({
           Adicionar usuário
         </Button>
       </SheetTrigger>
-      <SheetContent className="bg-sidebar w-[600px] sm:max-w-[600px] flex flex-col p-0 overflow-hidden">
+      <SheetContent className="bg-sidebar w-[600px] sm:max-w-[600px] flex flex-col p-0 gap-y-0 overflow-hidden">
         <SheetHeader className="flex-shrink-0 bg-sidebar border-b px-6 py-4">
           <SheetTitle>Adicionar usuário</SheetTitle>
           <SheetDescription>
@@ -282,7 +283,10 @@ export default function AdicionarUsuarioSheet({
                 <Alert variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription>
-                    {errorDepartamentos || errorLojas || errorRelatorios || errorPermissoes}
+                    {errorDepartamentos ||
+                      errorLojas ||
+                      errorRelatorios ||
+                      errorPermissoes}
                   </AlertDescription>
                 </Alert>
               )}
@@ -299,7 +303,10 @@ export default function AdicionarUsuarioSheet({
                           Nome completo <span className="text-red-500">*</span>
                         </FormLabel>
                         <FormControl>
-                          <Input placeholder="Digite o nome completo" {...field} />
+                          <Input
+                            placeholder="Digite o nome completo"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -316,7 +323,11 @@ export default function AdicionarUsuarioSheet({
                           Email <span className="text-red-500">*</span>
                         </FormLabel>
                         <FormControl>
-                          <Input type="email" placeholder="Digite o email" {...field} />
+                          <Input
+                            type="email"
+                            placeholder="Digite o email"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -333,7 +344,11 @@ export default function AdicionarUsuarioSheet({
                           Senha <span className="text-red-500">*</span>
                         </FormLabel>
                         <FormControl>
-                          <Input type="password" placeholder="Digite a senha" {...field} />
+                          <Input
+                            type="password"
+                            placeholder="Digite a senha"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -369,7 +384,7 @@ export default function AdicionarUsuarioSheet({
                                 </div>
                               </div>
                             )}
-                            
+
                             <div className="relative">
                               <input
                                 type="file"
@@ -382,12 +397,14 @@ export default function AdicionarUsuarioSheet({
                                 value=""
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                               />
-                              <div className={cn(
-                                "border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200",
-                                value 
-                                  ? "border-green-300 bg-green-50 hover:border-green-400" 
-                                  : "border-gray-300 bg-gray-50 hover:border-primary hover:bg-primary/5"
-                              )}>
+                              <div
+                                className={cn(
+                                  "border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200",
+                                  value
+                                    ? "border-green-300 bg-green-50 hover:border-green-400"
+                                    : "border-gray-300 bg-gray-50 hover:border-primary hover:bg-primary/5"
+                                )}
+                              >
                                 <div className="flex flex-col items-center gap-3">
                                   {value ? (
                                     <>
@@ -398,7 +415,9 @@ export default function AdicionarUsuarioSheet({
                                         <p className="text-sm font-medium text-green-700">
                                           Arquivo selecionado!
                                         </p>
-                                        <p className="text-xs text-green-600">{value.name}</p>
+                                        <p className="text-xs text-green-600">
+                                          {value.name}
+                                        </p>
                                       </div>
                                     </>
                                   ) : (
@@ -431,15 +450,12 @@ export default function AdicionarUsuarioSheet({
                           Departamentos <span className="text-red-500">*</span>
                         </FormLabel>
                         <FormControl>
-                          <EnhancedMultiSelect
+                          <MultiSelect
                             options={departamentosOptions}
                             value={field.value}
                             onChange={field.onChange}
                             placeholder="Selecione os departamentos"
-                            getOptionValue={getDepartamentoValue}
-                            getDisplayValue={getDepartamentoDisplay}
                             hasError={!!fieldState.error}
-                            loading={loadingDepartamentos}
                           />
                         </FormControl>
                         <FormMessage />
@@ -457,15 +473,12 @@ export default function AdicionarUsuarioSheet({
                           Lojas <span className="text-red-500">*</span>
                         </FormLabel>
                         <FormControl>
-                          <EnhancedMultiSelect
+                          <MultiSelect
                             options={lojasOptions}
                             value={field.value}
                             onChange={field.onChange}
                             placeholder="Selecione as lojas"
-                            getOptionValue={getLojaValue}
-                            getDisplayValue={getLojaDisplay}
                             hasError={!!fieldState.error}
-                            loading={loadingLojas}
                           />
                         </FormControl>
                         <FormMessage />
@@ -483,15 +496,12 @@ export default function AdicionarUsuarioSheet({
                           Relatórios <span className="text-red-500">*</span>
                         </FormLabel>
                         <FormControl>
-                          <EnhancedMultiSelect
+                          <MultiSelect
                             options={relatoriosOptions}
                             value={field.value}
                             onChange={field.onChange}
                             placeholder="Selecione os relatórios"
-                            getOptionValue={getRelatorioValue}
-                            getDisplayValue={getRelatorioDisplay}
                             hasError={!!fieldState.error}
-                            loading={loadingRelatorios}
                           />
                         </FormControl>
                         <FormDescription>
@@ -512,10 +522,12 @@ export default function AdicionarUsuarioSheet({
                       render={({ fieldState }) => (
                         <FormItem>
                           <FormLabel>
-                            Permissões do usuário <span className="text-red-500">*</span>
+                            Permissões do usuário
                           </FormLabel>
                           {fieldState.error && (
-                            <FormMessage>{fieldState.error.message}</FormMessage>
+                            <FormMessage>
+                              {fieldState.error.message}
+                            </FormMessage>
                           )}
                         </FormItem>
                       )}
@@ -526,12 +538,18 @@ export default function AdicionarUsuarioSheet({
                         <h4 className="text-sm font-medium">{modulo.nome}</h4>
                         <div className="space-y-5">
                           {modulo.permissoes.map((permissao) => (
-                            <div key={permissao.id} className="flex flex-col space-y-0">
+                            <div
+                              key={permissao.id}
+                              className="flex flex-col space-y-0"
+                            >
                               <div className="flex items-center space-x-2">
                                 <Checkbox
                                   checked={selectedPermissoes.has(permissao.id)}
                                   onCheckedChange={(checked) =>
-                                    handlePermissaoChange(permissao.id, checked === true)
+                                    handlePermissaoChange(
+                                      permissao.id,
+                                      checked === true
+                                    )
                                   }
                                 />
                                 <label className="text-sm font-medium cursor-pointer">
@@ -549,11 +567,12 @@ export default function AdicionarUsuarioSheet({
                       </div>
                     ))}
 
-                    {modulosComPermissoes.length === 0 && !loadingPermissoes && (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <p>Nenhum módulo com permissões encontrado.</p>
-                      </div>
-                    )}
+                    {modulosComPermissoes.length === 0 &&
+                      !loadingPermissoes && (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <p>Nenhum módulo com permissões encontrado.</p>
+                        </div>
+                      )}
                   </div>
                 </>
               )}

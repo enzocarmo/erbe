@@ -36,7 +36,7 @@ export function useDepartamentos(): UseDepartamentosReturn {
         }
       );
 
-      setDepartamentos(response.data.departamentos || []);
+      setDepartamentos(response.data.response?.departamentos || []);
     } catch (err) {
       const errorMessage = axios.isAxiosError(err)
         ? err.response?.data?.message || 'Erro ao carregar departamentos'
