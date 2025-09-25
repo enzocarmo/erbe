@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { supabase } from "@/lib/supabase"; // Assume que você tem o client configurado
+import { supabase } from "@/lib/supabase";
 import {
   Sheet,
   SheetContent,
@@ -22,93 +22,75 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
 import {
   Plus,
-  Check,
-  ChevronsUpDown,
-  X,
   Upload,
   CheckCircle,
-  XCircle,
+  X,
   Loader2,
   AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Tipos para dados do Supabase
-interface Modulo {
-  id: string;
-  nome: string;
-}
+// Hooks customizados
+import { useDepartamentos } from "@/hooks/useDepartamentos";
+import { useLojas } from "@/hooks/useLojas";
+import { useRelatorios } from "@/hooks/useRelatorios";
 
-interface Permissao {
-  id: string;
-  nome: string;
-  descricao: string | null;
-  permissao: string;
-  modulo: string;
-}
+// Tipos
+import type { 
+  ModuloComPermissoes, 
+  UserFormData 
+} from "@/types/user";
+import type { 
+  DepartamentoFormData, 
+  LojaFormData, 
+  FlexDepartamento,
+  FlexUnidade 
+} from "@/types/flex";
 
-interface ModuloComPermissoes extends Modulo {
-  permissoes: Permissao[];
-}
+// Componentes
+import { EnhancedMultiSelect, MultiSelectOption } from "@/components/ui/enhanced-multiselect";
 
-// Schema de validação dinâmico
-function createFormSchema(modulosComPermissoes: ModuloComPermissoes[]) {
-  const permissoesSchema: Record<string, z.ZodObject<any>> = {};
-  
-  modulosComPermissoes.forEach((modulo) => {
-    const permissoesCampos: Record<string, z.ZodBoolean> = {};
-    modulo.permissoes.forEach((permissao) => {
-      permissoesCampos[permissao.permissao] = z.boolean();
-    });
-    permissoesSchema[modulo.id] = z.object(permissoesCampos);
-  });
+// Schema de validação
+const formSchema = z.object({
+  nome: z.string().min(1, "Nome é obrigatório"),
+  email: z.string().email("Email inválido").min(1, "Email é obrigatório"),
+  senha: z.string()
+    .min(6, "Senha deve ter pelo menos 6 caracteres")
+    .regex(/[a-z]/, "Deve conter ao menos uma letra minúscula")
+    .regex(/[A-Z]/, "Deve conter ao menos uma letra maiúscula")
+    .regex(/[0-9]/, "Deve conter ao menos um número")
+    .regex(/[^a-zA-Z0-9]/, "Deve conter ao menos um símbolo"),
+  foto_perfil: z.instanceof(File, { message: "Foto de perfil é obrigatória" }),
+  departamentos: z
+    .array(z.object({
+      departamento_nome: z.string(),
+      departamento_codigo: z.string(),
+    }))
+    .min(1, "Pelo menos um departamento deve ser selecionado"),
+  lojas: z
+    .array(z.object({
+      loja_codigo: z.string(),
+      loja_nome: z.string(),
+      loja_municipio: z.string(),
+    }))
+    .min(1, "Pelo menos uma loja deve ser selecionada"),
+  relatorios: z
+    .array(z.string())
+    .min(1, "Pelo menos um relatório deve ser selecionado"),
+  permissoes: z
+    .array(z.string())
+    .min(1, "Pelo menos uma permissão deve ser selecionada"),
+});
 
-  return z.object({
-    nome: z.string().min(1, "Nome é obrigatório"),
-    email: z.string().email("Email inválido").min(1, "Email é obrigatório"),
-    senha: z.string()
-      .min(6, "Senha deve ter pelo menos 6 caracteres")
-      .regex(/[a-z]/, "Deve conter ao menos uma letra minúscula")
-      .regex(/[A-Z]/, "Deve conter ao menos uma letra maiúscula")
-      .regex(/[0-9]/, "Deve conter ao menos um número")
-      .regex(/[^a-zA-Z0-9]/, "Deve conter ao menos um símbolo"),
-    foto_perfil: z.instanceof(File, { message: "Foto de perfil é obrigatória" }),
-    departamentos: z
-      .array(z.string())
-      .min(1, "Pelo menos um departamento deve ser selecionado"),
-    lojas: z
-      .array(z.string())
-      .min(1, "Pelo menos uma loja deve ser selecionada"),
-    relatorios: z
-      .array(z.string())
-      .min(1, "Pelo menos um relatório deve ser selecionado"),
-    permissoes: z.object(permissoesSchema),
-  });
-}
-
-// Hook para buscar dados do Supabase
-function useSupabaseData() {
+// Hook para buscar módulos e permissões
+function useModulosPermissoes() {
   const [modulosComPermissoes, setModulosComPermissoes] = useState<ModuloComPermissoes[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -119,33 +101,25 @@ function useSupabaseData() {
         setLoading(true);
         setError(null);
 
-        // Buscar módulos e permissões
-        const { data: modulosData, error: modulosError } = await supabase
-          .from('modulos')
-          .select('*')
-          .order('nome');
+        const [modulosResult, permissoesResult] = await Promise.all([
+          supabase.from('modulos').select('*').order('nome'),
+          supabase.from('permissoes').select('*').order('nome'),
+        ]);
 
-        if (modulosError) throw modulosError;
+        if (modulosResult.error) throw modulosResult.error;
+        if (permissoesResult.error) throw permissoesResult.error;
 
-        const { data: permissoesData, error: permissoesError } = await supabase
-          .from('permissoes')
-          .select('*')
-          .order('nome');
-
-        if (permissoesError) throw permissoesError;
-
-        // Agrupar permissões por módulo e filtrar apenas módulos com permissões
-        const modulosComPermissoesData: ModuloComPermissoes[] = modulosData
+        const modulosData: ModuloComPermissoes[] = modulosResult.data
           .map((modulo) => ({
             ...modulo,
-            permissoes: permissoesData.filter((permissao) => permissao.modulo === modulo.id),
+            permissoes: permissoesResult.data.filter((permissao) => permissao.modulo === modulo.id),
           }))
-          .filter((modulo) => modulo.permissoes.length > 0); // Só módulos com permissões
+          .filter((modulo) => modulo.permissoes.length > 0);
 
-        setModulosComPermissoes(modulosComPermissoesData);
+        setModulosComPermissoes(modulosData);
       } catch (err) {
-        console.error('Erro ao buscar dados:', err);
-        setError('Erro ao carregar dados. Tente novamente.');
+        console.error('Erro ao buscar módulos e permissões:', err);
+        setError('Erro ao carregar permissões. Tente novamente.');
       } finally {
         setLoading(false);
       }
@@ -154,139 +128,13 @@ function useSupabaseData() {
     fetchData();
   }, []);
 
-  return { modulosComPermissoes, loading, error, refetch: () => {
-    setLoading(true);
-    setError(null);
-  }};
+  return { modulosComPermissoes, loading, error };
 }
 
-// Interface para as props do componente
 interface AdicionarUsuarioSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: any) => void;
-}
-
-// Dados mockados (mantidos para departamentos, lojas e relatórios)
-const mockData = {
-  departamentos: ["Eletrodomésticos", "Móveis", "Decoração", "Cama & Banho", "Informática", "Casa & Jardim"],
-  lojas: ["Loja Centro", "Loja Norte", "Loja Sul", "Loja Oeste", "Loja Leste", "Loja Shopping"],
-  relatorios: [
-    "Relatório de Vendas",
-    "Relatório de Estoque",
-    "Relatório de Margem",
-    "Relatório de Performance",
-    "Relatório de Concorrência",
-    "Relatório de Sazonalidade"
-  ],
-};
-
-// Componente Multi-select (mantido igual)
-function MultiSelect({
-  options,
-  value = [],
-  onChange,
-  placeholder,
-  searchPlaceholder = "Pesquisar...",
-  emptyMessage = "Nenhum item encontrado.",
-  hasError = false,
-}: {
-  options: string[];
-  value?: string[];
-  onChange: (value: string[]) => void;
-  placeholder: string;
-  searchPlaceholder?: string;
-  emptyMessage?: string;
-  hasError?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-
-  const handleSelect = (selectedValue: string) => {
-    const newValue = value.includes(selectedValue)
-      ? value.filter((item) => item !== selectedValue)
-      : [...value, selectedValue];
-    onChange(newValue);
-  };
-
-  const removeItem = (item: string) => {
-    onChange(value.filter((v) => v !== item));
-  };
-
-  return (
-    <div className="space-y-2">
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className={cn(
-              "w-full justify-between bg-white hover:bg-accent hover:text-accent-foreground",
-              "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-              value.length === 0 && "text-muted-foreground",
-              hasError && "border-destructive focus-visible:ring-destructive"
-            )}
-          >
-            {value.length === 0
-              ? placeholder
-              : `${value.length} item(s) selecionado(s)`}
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[var(--radix-popover-trigger-width)] max-h-[300px] p-0">
-          <Command>
-            <CommandInput placeholder={searchPlaceholder} />
-            <CommandEmpty>{emptyMessage}</CommandEmpty>
-            <CommandList>
-              <CommandGroup>
-                {options.map((option) => (
-                  <CommandItem
-                    key={option}
-                    value={option}
-                    onSelect={() => handleSelect(option)}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        value.includes(option) ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    {option}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
-
-      {value.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {value.map((item) => (
-            <Badge key={item} variant="secondary" className="text-xs">
-              {item}
-              <button
-                type="button"
-                className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    removeItem(item);
-                  }
-                }}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-                onClick={() => removeItem(item)}
-              >
-                <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-              </button>
-            </Badge>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  onSubmit: (data: UserFormData) => void;
 }
 
 export default function AdicionarUsuarioSheet({
@@ -294,43 +142,19 @@ export default function AdicionarUsuarioSheet({
   onOpenChange,
   onSubmit,
 }: AdicionarUsuarioSheetProps) {
-  const { modulosComPermissoes, loading, error } = useSupabaseData();
-  
-  // Criar valores padrão para permissões dinamicamente
-  const createDefaultPermissoes = () => {
-    if (modulosComPermissoes.length === 0) {
-      return {};
-    }
-    
-    const defaultPermissoes: Record<string, Record<string, boolean>> = {};
-    modulosComPermissoes.forEach((modulo) => {
-      if (modulo && modulo.id && modulo.permissoes) {
-        defaultPermissoes[modulo.id] = {};
-        modulo.permissoes.forEach((permissao) => {
-          if (permissao && permissao.permissao) {
-            defaultPermissoes[modulo.id][permissao.permissao] = false;
-          }
-        });
-      }
-    });
-    return defaultPermissoes;
-  };
+  const [selectedPermissoes, setSelectedPermissoes] = useState<Set<string>>(new Set());
 
-  // Schema dinâmico baseado nos dados carregados
-  const formSchema = modulosComPermissoes.length > 0 
-    ? createFormSchema(modulosComPermissoes)
-    : z.object({
-        nome: z.string(),
-        email: z.string(),
-        senha: z.string(),
-        foto_perfil: z.any(),
-        departamentos: z.array(z.string()),
-        lojas: z.array(z.string()),
-        relatorios: z.array(z.string()),
-        permissoes: z.object({}),
-      });
+  // Hooks para buscar dados
+  const { departamentos, loading: loadingDepartamentos, error: errorDepartamentos } = useDepartamentos();
+  const { lojasGrouped, loading: loadingLojas, error: errorLojas } = useLojas();
+  const { relatorios, loading: loadingRelatorios, error: errorRelatorios } = useRelatorios();
+  const { modulosComPermissoes, loading: loadingPermissoes, error: errorPermissoes } = useModulosPermissoes();
 
-  const form = useForm({
+  // Verificar se há algum erro
+  const hasError = errorDepartamentos || errorLojas || errorRelatorios || errorPermissoes;
+  const isLoading = loadingDepartamentos || loadingLojas || loadingRelatorios || loadingPermissoes;
+
+  const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       nome: "",
@@ -340,75 +164,99 @@ export default function AdicionarUsuarioSheet({
       departamentos: [],
       lojas: [],
       relatorios: [],
-      permissoes: {},
+      permissoes: [],
     },
   });
 
-  // Reset form quando os dados são carregados
-  useEffect(() => {
-    if (modulosComPermissoes.length > 0) {
-      const defaultPermissoes = createDefaultPermissoes();
-      form.reset({
-        nome: "",
-        email: "",
-        senha: "",
-        foto_perfil: undefined,
-        departamentos: [],
-        lojas: [],
-        relatorios: [],
-        permissoes: defaultPermissoes,
-      });
-    }
-  }, [modulosComPermissoes, form]);
+  // Preparar opções para os multiselects
+  const departamentosOptions: MultiSelectOption[] = departamentos.map((dep) => ({
+    value: dep.codigo,
+    label: `${dep.descricao} - ${dep.codigo}`,
+  }));
 
-  const handleFormSubmit = (data: any) => {
-    // Garantir que todas as permissões tenham valores boolean
-    const processedData = {
+  const lojasOptions: MultiSelectOption[] = lojasGrouped.flatMap((group) =>
+    group.lojas.map((loja) => ({
+      value: loja.Codigo,
+      label: `${loja.Nome} - ${loja.Codigo}`,
+      group: group.municipio,
+    }))
+  );
+
+  const relatoriosOptions: MultiSelectOption[] = relatorios.map((rel) => ({
+    value: rel.id,
+    label: rel.nome,
+  }));
+
+  // Handlers para conversão de dados
+  const getDepartamentoValue = (option: MultiSelectOption): DepartamentoFormData => {
+    const departamento = departamentos.find(d => d.codigo === option.value);
+    return {
+      departamento_nome: departamento?.descricao || "",
+      departamento_codigo: option.value,
+    };
+  };
+
+  const getLojaValue = (option: MultiSelectOption): LojaFormData => {
+    const loja = lojasGrouped
+      .flatMap(group => group.lojas)
+      .find(l => l.Codigo === option.value);
+    
+    return {
+      loja_codigo: option.value,
+      loja_nome: loja?.Nome || "",
+      loja_municipio: loja?.Municipio || "",
+    };
+  };
+
+  const getRelatorioValue = (option: MultiSelectOption): string => option.value;
+
+  // Display functions
+  const getDepartamentoDisplay = (dep: DepartamentoFormData) => 
+    `${dep.departamento_nome} - ${dep.departamento_codigo}`;
+  
+  const getLojaDisplay = (loja: LojaFormData) => 
+    `${loja.loja_nome} - ${loja.loja_codigo}`;
+  
+  const getRelatorioDisplay = (relatorioId: string) => 
+    relatorios.find(r => r.id === relatorioId)?.nome || relatorioId;
+
+  const handleFormSubmit = (data: z.infer<typeof formSchema>) => {
+    const processedData: UserFormData = {
       ...data,
-      permissoes: Object.fromEntries(
-        Object.entries(data.permissoes || {}).map(([moduloId, perms]) => [
-          moduloId,
-          Object.fromEntries(
-            Object.entries(perms as Record<string, any>).map(([permKey, value]) => [
-              permKey,
-              Boolean(value)
-            ])
-          )
-        ])
-      )
+      permissoes: Array.from(selectedPermissoes),
     };
     
     onSubmit(processedData);
     onOpenChange(false);
-    
-    // Reset com valores padrão seguros
-    if (modulosComPermissoes.length > 0) {
-      const defaultPermissoes = createDefaultPermissoes();
-      form.reset({
-        nome: "",
-        email: "",
-        senha: "",
-        foto_perfil: undefined,
-        departamentos: [],
-        lojas: [],
-        relatorios: [],
-        permissoes: defaultPermissoes,
-      });
-    } else {
-      form.reset();
-    }
+    form.reset();
+    setSelectedPermissoes(new Set());
+  };
+
+  const handlePermissaoChange = (permissaoId: string, checked: boolean) => {
+    setSelectedPermissoes(prev => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(permissaoId);
+      } else {
+        newSet.delete(permissaoId);
+      }
+      
+      // Atualizar o form com o novo array
+      form.setValue("permissoes", Array.from(newSet));
+      return newSet;
+    });
   };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>
         <Button>
+          <Plus className="mr-2 h-4 w-4" />
           Adicionar usuário
-          <Plus className="ml-2 h-4 w-4" />
         </Button>
       </SheetTrigger>
-      <SheetContent className="bg-sidebar w-[600px] sm:max-w-[600px] flex flex-col p-0 overflow-hidden gap-y-0">
-        <SheetHeader className="flex-shrink-0 bg-sidebar border-b px-6 py-4 gap-y-0">
+      <SheetContent className="bg-sidebar w-[600px] sm:max-w-[600px] flex flex-col p-0 overflow-hidden">
+        <SheetHeader className="flex-shrink-0 bg-sidebar border-b px-6 py-4">
           <SheetTitle>Adicionar usuário</SheetTitle>
           <SheetDescription>
             Preencha os campos abaixo para adicionar um novo usuário ao sistema.
@@ -421,8 +269,7 @@ export default function AdicionarUsuarioSheet({
             className="flex flex-col flex-1 min-h-0"
           >
             <div className="flex-1 overflow-y-auto px-6 pt-6 pb-6 space-y-6">
-              {/* Loading state */}
-              {loading && (
+              {isLoading && (
                 <div className="flex items-center justify-center py-8">
                   <div className="flex items-center gap-3 text-muted-foreground">
                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -431,16 +278,16 @@ export default function AdicionarUsuarioSheet({
                 </div>
               )}
 
-              {/* Error state */}
-              {error && (
+              {hasError && (
                 <Alert variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
+                  <AlertDescription>
+                    {errorDepartamentos || errorLojas || errorRelatorios || errorPermissoes}
+                  </AlertDescription>
                 </Alert>
               )}
 
-              {/* Form fields - só renderiza se não estiver carregando */}
-              {!loading && !error && (
+              {!isLoading && !hasError && (
                 <>
                   {/* Nome */}
                   <FormField
@@ -449,14 +296,10 @@ export default function AdicionarUsuarioSheet({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          Nome completo{" "}
-                          <span className="text-red-500">*</span>
+                          Nome completo <span className="text-red-500">*</span>
                         </FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder="Digite o nome completo"
-                            {...field}
-                          />
+                          <Input placeholder="Digite o nome completo" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -473,11 +316,7 @@ export default function AdicionarUsuarioSheet({
                           Email <span className="text-red-500">*</span>
                         </FormLabel>
                         <FormControl>
-                          <Input
-                            type="email"
-                            placeholder="Digite o email"
-                            {...field}
-                          />
+                          <Input type="email" placeholder="Digite o email" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -494,11 +333,7 @@ export default function AdicionarUsuarioSheet({
                           Senha <span className="text-red-500">*</span>
                         </FormLabel>
                         <FormControl>
-                          <Input
-                            type="password"
-                            placeholder="Digite a senha"
-                            {...field}
-                          />
+                          <Input type="password" placeholder="Digite a senha" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -516,7 +351,6 @@ export default function AdicionarUsuarioSheet({
                         </FormLabel>
                         <FormControl>
                           <div className="space-y-4">
-                            {/* Preview da imagem */}
                             {value && (
                               <div className="flex items-center justify-center">
                                 <div className="relative">
@@ -536,7 +370,6 @@ export default function AdicionarUsuarioSheet({
                               </div>
                             )}
                             
-                            {/* Área de upload */}
                             <div className="relative">
                               <input
                                 type="file"
@@ -563,14 +396,9 @@ export default function AdicionarUsuarioSheet({
                                       </div>
                                       <div className="space-y-1">
                                         <p className="text-sm font-medium text-green-700">
-                                          Arquivo selecionado com sucesso!
+                                          Arquivo selecionado!
                                         </p>
-                                        <p className="text-xs text-green-600">
-                                          {value.name}
-                                        </p>
-                                        <p className="text-xs text-gray-500">
-                                          Clique para alterar a imagem
-                                        </p>
+                                        <p className="text-xs text-green-600">{value.name}</p>
                                       </div>
                                     </>
                                   ) : (
@@ -578,14 +406,9 @@ export default function AdicionarUsuarioSheet({
                                       <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
                                         <Upload className="h-6 w-6 text-primary" />
                                       </div>
-                                      <div className="space-y-1">
-                                        <p className="text-sm font-medium text-gray-700">
-                                          Clique para selecionar uma imagem
-                                        </p>
-                                        <p className="text-xs text-gray-500">
-                                          PNG, JPG, GIF até 10MB
-                                        </p>
-                                      </div>
+                                      <p className="text-sm font-medium text-gray-700">
+                                        Clique para selecionar uma imagem
+                                      </p>
                                     </>
                                   )}
                                 </div>
@@ -593,9 +416,6 @@ export default function AdicionarUsuarioSheet({
                             </div>
                           </div>
                         </FormControl>
-                        <FormDescription>
-                          Selecione uma foto para o perfil do usuário
-                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -611,14 +431,15 @@ export default function AdicionarUsuarioSheet({
                           Departamentos <span className="text-red-500">*</span>
                         </FormLabel>
                         <FormControl>
-                          <MultiSelect
-                            options={mockData.departamentos}
+                          <EnhancedMultiSelect
+                            options={departamentosOptions}
                             value={field.value}
                             onChange={field.onChange}
                             placeholder="Selecione os departamentos"
-                            searchPlaceholder="Pesquisar departamentos..."
-                            emptyMessage="Nenhum departamento encontrado."
+                            getOptionValue={getDepartamentoValue}
+                            getDisplayValue={getDepartamentoDisplay}
                             hasError={!!fieldState.error}
+                            loading={loadingDepartamentos}
                           />
                         </FormControl>
                         <FormMessage />
@@ -636,14 +457,15 @@ export default function AdicionarUsuarioSheet({
                           Lojas <span className="text-red-500">*</span>
                         </FormLabel>
                         <FormControl>
-                          <MultiSelect
-                            options={mockData.lojas}
+                          <EnhancedMultiSelect
+                            options={lojasOptions}
                             value={field.value}
                             onChange={field.onChange}
                             placeholder="Selecione as lojas"
-                            searchPlaceholder="Pesquisar lojas..."
-                            emptyMessage="Nenhuma loja encontrada."
+                            getOptionValue={getLojaValue}
+                            getDisplayValue={getLojaDisplay}
                             hasError={!!fieldState.error}
+                            loading={loadingLojas}
                           />
                         </FormControl>
                         <FormMessage />
@@ -661,14 +483,15 @@ export default function AdicionarUsuarioSheet({
                           Relatórios <span className="text-red-500">*</span>
                         </FormLabel>
                         <FormControl>
-                          <MultiSelect
-                            options={mockData.relatorios}
+                          <EnhancedMultiSelect
+                            options={relatoriosOptions}
                             value={field.value}
                             onChange={field.onChange}
                             placeholder="Selecione os relatórios"
-                            searchPlaceholder="Pesquisar relatórios..."
-                            emptyMessage="Nenhum relatório encontrado."
+                            getOptionValue={getRelatorioValue}
+                            getDisplayValue={getRelatorioDisplay}
                             hasError={!!fieldState.error}
+                            loading={loadingRelatorios}
                           />
                         </FormControl>
                         <FormDescription>
@@ -681,58 +504,54 @@ export default function AdicionarUsuarioSheet({
 
                   <Separator />
 
-                  {/* Permissões Dinâmicas */}
+                  {/* Permissões */}
                   <div className="space-y-6">
-                    <h3 className="text-sm font-medium text-muted-foreground">
-                      Permissões do usuário
-                    </h3>
+                    <FormField
+                      control={form.control}
+                      name="permissoes"
+                      render={({ fieldState }) => (
+                        <FormItem>
+                          <FormLabel>
+                            Permissões do usuário <span className="text-red-500">*</span>
+                          </FormLabel>
+                          {fieldState.error && (
+                            <FormMessage>{fieldState.error.message}</FormMessage>
+                          )}
+                        </FormItem>
+                      )}
+                    />
 
-                    {modulosComPermissoes.length > 0 && modulosComPermissoes.map((modulo) => (
+                    {modulosComPermissoes.map((modulo) => (
                       <div key={modulo.id} className="space-y-3">
                         <h4 className="text-sm font-medium">{modulo.nome}</h4>
                         <div className="space-y-5">
-                          {modulo.permissoes && modulo.permissoes.length > 0 && modulo.permissoes.map((permissao) => (
-                            <FormField
-                              key={permissao.id}
-                              control={form.control}
-                              name={`permissoes.${modulo.id}.${permissao.permissao}`}
-                              render={({ field }) => {
-                                const fieldValue = field.value;
-                                const isChecked = typeof fieldValue === 'boolean' ? fieldValue : false;
-                                
-                                return (
-                                  <FormItem className="flex flex-col space-y-0">
-                                    <div className="flex items-center space-x-2">
-                                      <FormControl>
-                                        <Checkbox
-                                          checked={isChecked}
-                                          onCheckedChange={(checked) => {
-                                            field.onChange(checked === true);
-                                          }}
-                                        />
-                                      </FormControl>
-                                      <FormLabel className="text-sm font-medium cursor-pointer">
-                                        {permissao.nome}
-                                      </FormLabel>
-                                    </div>
-                                    {permissao.descricao && (
-                                      <FormDescription className="text-xs text-muted-foreground ml-6">
-                                        {permissao.descricao}
-                                      </FormDescription>
-                                    )}
-                                  </FormItem>
-                                );
-                              }}
-                            />
+                          {modulo.permissoes.map((permissao) => (
+                            <div key={permissao.id} className="flex flex-col space-y-0">
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  checked={selectedPermissoes.has(permissao.id)}
+                                  onCheckedChange={(checked) =>
+                                    handlePermissaoChange(permissao.id, checked === true)
+                                  }
+                                />
+                                <label className="text-sm font-medium cursor-pointer">
+                                  {permissao.nome}
+                                </label>
+                              </div>
+                              {permissao.descricao && (
+                                <p className="text-xs text-muted-foreground ml-6">
+                                  {permissao.descricao}
+                                </p>
+                              )}
+                            </div>
                           ))}
                         </div>
                       </div>
                     ))}
 
-                    {modulosComPermissoes.length === 0 && !loading && !error && (
+                    {modulosComPermissoes.length === 0 && !loadingPermissoes && (
                       <div className="text-center py-8 text-muted-foreground">
                         <p>Nenhum módulo com permissões encontrado.</p>
-                        <p className="text-xs mt-1">Verifique se há módulos e permissões cadastrados no sistema.</p>
                       </div>
                     )}
                   </div>
@@ -740,7 +559,6 @@ export default function AdicionarUsuarioSheet({
               )}
             </div>
 
-            {/* Botões sticky */}
             <div className="flex-shrink-0 border-t bg-sidebar px-6 py-4">
               <div className="flex justify-end gap-3">
                 <Button
@@ -750,11 +568,8 @@ export default function AdicionarUsuarioSheet({
                 >
                   Cancelar
                 </Button>
-                <Button 
-                  type="submit" 
-                  disabled={loading || !!error}
-                >
-                  {loading ? (
+                <Button type="submit" disabled={!!isLoading}>
+                  {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Carregando...

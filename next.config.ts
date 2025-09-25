@@ -1,7 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  async rewrites() {
+    return [
+      {
+        source: '/api/flex/:path*',
+        destination: 'http://172.16.200.56:9000/:path*',
+      },
+    ];
+  },
 };
 
 export default nextConfig;
