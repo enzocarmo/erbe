@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react'
 import { User } from '@supabase/supabase-js'
 import { supabase, Usuario } from '@/lib/supabase'
 
@@ -18,6 +18,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [userProfile, setUserProfile] = useState<Usuario | null>(null)
   const [loading, setLoading] = useState(true)
+  const isInitialized = useRef(false)
 
   const fetchUserProfile = async (userId: string) => {
     try {
@@ -66,7 +67,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    // Buscar usuário atual
+    // Evitar inicialização dupla
+    if (isInitialized.current) return
+    isInitialized.current = true
+
+    // Buscar usuário atual apenas uma vez
     const getInitialUser = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser()
@@ -89,21 +94,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         const currentUser = session?.user ?? null
-        setUser(currentUser)
+        
+        // Só atualizar se realmente mudou
+        if (currentUser?.id !== user?.id) {
+          setUser(currentUser)
 
-        if (currentUser) {
-          const profile = await fetchUserProfile(currentUser.id)
-          setUserProfile(profile)
-        } else {
-          setUserProfile(null)
+          if (currentUser) {
+            const profile = await fetchUserProfile(currentUser.id)
+            setUserProfile(profile)
+          } else {
+            setUserProfile(null)
+          }
         }
 
-        setLoading(false)
+        // Garantir que loading seja false após mudanças
+        if (loading) {
+          setLoading(false)
+        }
       }
     )
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, []) // Dependências vazias para evitar re-execução
 
   const value = {
     user,

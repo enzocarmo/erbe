@@ -27,32 +27,46 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Verificar se o usuário está autenticado
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  try {
+    // Verificar se o usuário está autenticado
+    const {
+      data: { user },
+      error
+    } = await supabase.auth.getUser()
 
-  // Rotas que precisam de autenticação
-  const protectedRoutes = ['/usuarios', '/dashboard']
-  const isProtectedRoute = protectedRoutes.some(route => 
-    request.nextUrl.pathname.startsWith(route)
-  )
+    // Se houve erro na verificação, permitir que a aplicação lide com isso
+    if (error) {
+      console.error('Erro no middleware ao verificar usuário:', error)
+      // Em caso de erro, deixar a aplicação lidar com autenticação
+      return supabaseResponse
+    }
 
-  // Se está tentando acessar uma rota protegida sem estar logado
-  if (isProtectedRoute && !user) {
-    const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = '/'
-    return NextResponse.redirect(redirectUrl)
+    // Rotas que precisam de autenticação
+    const protectedRoutes = ['/usuarios', '/dashboard']
+    const isProtectedRoute = protectedRoutes.some(route => 
+      request.nextUrl.pathname.startsWith(route)
+    )
+
+    // Se está tentando acessar uma rota protegida sem estar logado
+    if (isProtectedRoute && !user) {
+      const redirectUrl = request.nextUrl.clone()
+      redirectUrl.pathname = '/'
+      return NextResponse.redirect(redirectUrl)
+    }
+
+    // Se está logado e tentando acessar a página de login, redirecionar para dashboard
+    if (user && request.nextUrl.pathname === '/') {
+      const redirectUrl = request.nextUrl.clone()
+      redirectUrl.pathname = '/dashboard'
+      return NextResponse.redirect(redirectUrl)
+    }
+
+    return supabaseResponse
+  } catch (error) {
+    console.error('Erro inesperado no middleware:', error)
+    // Em caso de erro inesperado, permitir acesso normal
+    return supabaseResponse
   }
-
-  // Se está logado e tentando acessar a página de login, redirecionar para dashboard
-  if (user && request.nextUrl.pathname === '/') {
-    const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = '/dashboard'
-    return NextResponse.redirect(redirectUrl)
-  }
-
-  return supabaseResponse
 }
 
 export const config = {

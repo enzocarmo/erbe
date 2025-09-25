@@ -110,54 +110,6 @@ const mockData = {
   ],
 };
 
-// Componente para validação da senha
-function PasswordValidation({ password }: { password: string }) {
-  const validations = [
-    { 
-      label: "Mínimo de 6 caracteres", 
-      isValid: password.length >= 6 
-    },
-    { 
-      label: "Ao menos uma letra minúscula", 
-      isValid: /[a-z]/.test(password) 
-    },
-    { 
-      label: "Ao menos uma letra maiúscula", 
-      isValid: /[A-Z]/.test(password) 
-    },
-    { 
-      label: "Ao menos um número", 
-      isValid: /[0-9]/.test(password) 
-    },
-    { 
-      label: "Ao menos um símbolo", 
-      isValid: /[^a-zA-Z0-9]/.test(password) 
-    },
-  ];
-
-  return (
-    <div className="space-y-2 mt-2">
-      {validations.map((validation, index) => (
-        <div key={index} className="flex items-center gap-2">
-          {validation.isValid ? (
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          ) : (
-            <XCircle className="h-4 w-4 text-red-600" />
-          )}
-          <span
-            className={cn(
-              "text-sm",
-              validation.isValid ? "text-green-600" : "text-red-600"
-            )}
-          >
-            {validation.label}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // Componente Multi-select
 function MultiSelect({
   options,
@@ -385,9 +337,6 @@ export default function AdicionarUsuarioSheet({
                         {...field}
                       />
                     </FormControl>
-                    {field.value && (
-                      <PasswordValidation password={field.value} />
-                    )}
                     <FormMessage />
                   </FormItem>
                 )}

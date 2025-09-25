@@ -10,7 +10,6 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
-import { useTheme } from "next-themes";
 
 import {
   SidebarGroup,
@@ -31,7 +30,6 @@ export function NavSecondary({
     icon: LucideIcon;
   }[];
 } & React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
-  const { setTheme, theme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
   const pathname = usePathname();
 
@@ -39,10 +37,6 @@ export function NavSecondary({
   React.useEffect(() => {
     setMounted(true);
   }, []);
-
-  const toggleTheme = () => {
-    setTheme(resolvedTheme === "dark" ? "light" : "dark");
-  };
 
   const { toggleSidebar, state } = useSidebar();
 
@@ -61,31 +55,6 @@ export function NavSecondary({
                 <PanelLeftOpen className="h-4 w-4" />
               )}
               <span>Recolher menu</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              tooltip={
-                mounted
-                  ? resolvedTheme === "dark"
-                    ? "Mudar para o modo claro"
-                    : "Mudar para o modo escuro"
-                  : "Mudar o tema"
-              }
-              onClick={toggleTheme}
-            >
-              {mounted && resolvedTheme === "dark" ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
-              <span>
-                {mounted
-                  ? resolvedTheme === "dark"
-                    ? "Modo claro"
-                    : "Modo escuro"
-                  : "Tema"}
-              </span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           {items.map((item) => {
